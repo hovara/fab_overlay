@@ -1,2 +1,2 @@
 default:
-	g++ src/*.cpp -o fabank -lGL -lglfw
+	g++ src/*.cpp -o fab_overlay -lGL -lglfw

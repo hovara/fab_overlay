@@ -2,8 +2,9 @@
 // (GLFW is a cross-platform general purpose library for handling windows, inputs, OpenGL/Vulkan/Metal graphics context creation, etc.)
 // If you are new to Dear ImGui, read documentation from the docs/ folder + read the top of imgui.cpp.
 // Read online: https://github.com/ocornut/imgui/tree/master/docs
-
 #include <cstdlib>
+#include <cstdio>
+#include <fstream>
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
@@ -21,14 +22,20 @@
 #pragma comment(lib, "legacy_stdio_definitions")
 #endif
 
-// This example can also compile and run with Emscripten! See 'Makefile.emscripten' for details.
-#ifdef __EMSCRIPTEN__
-#include "../libs/emscripten/emscripten_mainloop_stub.h"
-#endif
-
 static void glfw_error_callback(int error, const char* description)
 {
     fprintf(stderr, "GLFW Error %d: %s\n", error, description);
+}
+
+// Custom functions and variables
+
+ImVec2 window_size = ImVec2(300, 100);
+
+void change_balance(int value, float* target){
+    *target += value;
+    std::ofstream fout("./data/balance");
+    fout << (*target);
+    fout.close();
 }
 
 // Main code
@@ -68,16 +75,14 @@ int main(int, char**)
     window_flags |= ImGuiWindowFlags_NoMove;
     window_flags |= ImGuiWindowFlags_NoResize;
     window_flags |= ImGuiWindowFlags_NoCollapse;
-    //window_flags |= ImGuiWindowFlags_NoBackground;
+    window_flags |= ImGuiWindowFlags_NoBackground;
 
     // Create window with graphics context
-    ImVec2 window_size = ImVec2(500, 500);
 	glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER, GLFW_TRUE);
 	glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
 	GLFWwindow* window = glfwCreateWindow(window_size.x, window_size.y, "fabank", NULL, NULL);
 
-    if (window == nullptr)
-        return 1;
+    if(window == nullptr) return 1;
     
     glfwSetWindowPos(window, 20, 20);
     glfwMakeContextCurrent(window);
@@ -98,44 +103,22 @@ int main(int, char**)
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
 
-    // Load Fonts
-    // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
-    // - AddFontFromFileTTF() will return the ImFont* so you can store it if you need to select the font among multiple.
-    // - If the file cannot be loaded, the function will return a nullptr. Please handle those errors in your application (e.g. use an assertion, or display an error and quit).
-    // - The fonts will be rasterized at a given size (w/ oversampling) and stored into a texture when calling ImFontAtlas::Build()/GetTexDataAsXXXX(), which ImGui_ImplXXXX_NewFrame below will call.
-    // - Use '#define IMGUI_ENABLE_FREETYPE' in your imconfig file to use Freetype for higher quality font rendering.
-    // - Read 'docs/FONTS.md' for more instructions and details.
-    // - Remember that in C/C++ if you want to include a backslash \ in a string literal you need to write a double backslash \\ !
-    // - Our Emscripten build process allows embedding fonts to be accessible at runtime from the "fonts/" folder. See Makefile.emscripten for details.
-    //io.Fonts->AddFontDefault();
-    //io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\segoeui.ttf", 18.0f);
-    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/DroidSans.ttf", 16.0f);
-    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Roboto-Medium.ttf", 16.0f);
-    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Cousine-Regular.ttf", 15.0f);
-    //ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, nullptr, io.Fonts->GetGlyphRangesJapanese());
-    //IM_ASSERT(font != nullptr);
-
     // Our state
-    bool show_demo_window = true;
-    bool show_another_window = false;
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 0.00f);
 
+    float balance;
+    std::ifstream fbal("./data/balance");
+    fbal >> balance;
+    fbal.close();
+
     // Main loop
-#ifdef __EMSCRIPTEN__
-    // For an Emscripten build we are disabling file-system access, so let's not attempt to do a fopen() of the imgui.ini file.
-    // You may manually call LoadIniSettingsFromMemory() to load settings from your own storage.
-    io.IniFilename = nullptr;
-    EMSCRIPTEN_MAINLOOP_BEGIN
-#else
+    ImGui::GetIO().IniFilename = NULL;
     while (!glfwWindowShouldClose(window))
-#endif
     {
+        // Set the taskbar icon invisible
+            // Should happen one in 3 seconds
         system("xprop -name fabank -f _NET_WM_STATE 32a -set _NET_WM_STATE _NET_WM_STATE_SKIP_TASKBAR");
-        // Poll and handle events (inputs, window resize, etc.)
-        // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
-        // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.
-        // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application, or clear/overwrite your copy of the keyboard data.
-        // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
+        
         glfwPollEvents();
 
         // Start the Dear ImGui frame
@@ -146,9 +129,25 @@ int main(int, char**)
         // Laying out ImGui window
         ImGui::SetNextWindowPos(ImVec2(0, 0));
         ImGui::SetNextWindowSize(window_size);
-        ImGui::Begin("YANG", NULL, window_flags);
+        ImGui::Begin("widget", NULL, window_flags);
+
+        //ImGui::SetCursorPosX()
+        ImGui::TextWrapped("balance: %f", balance);
+        if(ImGui::TreeNode("+$")){
+            bool trigger = false;
+            if(ImGui::Button("+1")) change_balance(1, &balance);
+            ImGui::SameLine();
+            if(ImGui::Button("+5")) change_balance(5, &balance);
+            ImGui::SameLine();
+            if(ImGui::Button("+10")) change_balance(10, &balance);
+            ImGui::SameLine();
+            if(ImGui::Button("+100")) change_balance(100, &balance);
+            ImGui::TreePop();
+        }
+
+        if(ImGui::Button("EXIT")) glfwSetWindowShouldClose(window, GLFW_TRUE);
+
         ImGui::End();
-            
 
         // Rendering
         ImGui::Render();
@@ -161,9 +160,6 @@ int main(int, char**)
 
         glfwSwapBuffers(window);
     }
-#ifdef __EMSCRIPTEN__
-    EMSCRIPTEN_MAINLOOP_END;
-#endif
 
     // Cleanup
     ImGui_ImplOpenGL3_Shutdown();
