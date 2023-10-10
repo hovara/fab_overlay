@@ -134,7 +134,6 @@ int main(int, char**)
         //ImGui::SetCursorPosX()
         ImGui::TextWrapped("balance: %f", balance);
         if(ImGui::TreeNode("+$")){
-            bool trigger = false;
             if(ImGui::Button("+1")) change_balance(1, &balance);
             ImGui::SameLine();
             if(ImGui::Button("+5")) change_balance(5, &balance);
@@ -142,6 +141,14 @@ int main(int, char**)
             if(ImGui::Button("+10")) change_balance(10, &balance);
             ImGui::SameLine();
             if(ImGui::Button("+100")) change_balance(100, &balance);
+
+            if(ImGui::Button("-1")) change_balance(-1, &balance);
+            ImGui::SameLine();
+            if(ImGui::Button("-5")) change_balance(-5, &balance);
+            ImGui::SameLine();
+            if(ImGui::Button("-10")) change_balance(-10, &balance);
+            ImGui::SameLine();
+            if(ImGui::Button("-100")) change_balance(-100, &balance);
             ImGui::TreePop();
         }
 
